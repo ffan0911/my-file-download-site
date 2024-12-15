@@ -1,0 +1,204 @@
+package com.huawei.accountkit;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
+import com.huawei.accountkit.beans.HwIdUser;
+import com.huawei.hmf.tasks.OnCompleteListener;
+import com.huawei.hmf.tasks.Task;
+import com.huawei.hms.support.account.AccountAuthManager;
+import com.huawei.hms.support.account.request.AccountAuthParams;
+import com.huawei.hms.support.account.request.AccountAuthParamsHelper;
+import com.huawei.hms.support.account.result.AuthAccount;
+import com.huawei.hms.support.account.service.AccountAuthService;
+import com.huawei.hms.support.hwid.ui.HuaweiIdAuthButton;
+import org.jetbrains.annotations.NotNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+    private static final String TAG = "MainActivity";
+
+    // 华为帐号登录客户端
+    private AccountAuthService mAccountService;
+
+    private TextView mLoginStatus;
+
+    private TextView mName;
+
+    private TextView mEmail;
+
+    private TextView mNickName;
+
+    private TextView mUnionId;
+
+    private TextView mOpenId;
+
+    /**
+     * 请勿修改，否则可能影响考试成绩
+     */
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        initView();
+    }
+
+    /**
+     * 除了TODO标识的地方可以修改，其他地方请勿修改，否则影响考试成绩
+     */
+    private void initView() {
+        mLoginStatus = findViewById(R.id.login_status);
+        mName = findViewById(R.id.tv_name);
+        mEmail = findViewById(R.id.tv_email);
+        mNickName = findViewById(R.id.tv_nickname);
+        mUnionId = findViewById(R.id.tv_unionId);
+        mOpenId = findViewById(R.id.tv_openId);
+
+        // 华为帐号登录按钮
+        HuaweiIdAuthButton signInButton = findViewById(R.id.hwid_signin);
+        // TODO 为华为帐号登录按钮设置点击监听(MainActivity已实现OnClickListener接口)
+        signInButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MainActivity.this.onClick(v);
+            }
+        });
+
+        signInButton.setColorPolicy(HuaweiIdAuthButton.COLOR_POLICY_WHITE);
+
+        // 华为帐号登出按钮
+        HuaweiIdAuthButton signOutBtn = findViewById(R.id.hwid_signout);
+        // TODO 为华为帐号登出按钮设置点击监听(MainActivity已实现OnClickListener接口)
+        signOutBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MainActivity.this.onClick(v);
+            }
+        });
+
+        signOutBtn.setColorPolicy(HuaweiIdAuthButton.COLOR_POLICY_WHITE);
+        signOutBtn.mButton.setText(getResources().getText(R.string.login_out_button_text));
+    }
+
+    /**
+     * 华为帐号Id Token模式登录：需要考生填写
+     */
+    private void onAccountLogin() {
+        // TODO 构造华为帐号登录选项AccountAuthParams对象
+        AccountAuthParams authParams = new AccountAuthParamsHelper(AccountAuthParams.DEFAULT_AUTH_REQUEST_PARAM).setAuthorizationCode().createParams();
+
+        // TODO 初始化华为帐号登录客户端(mAccountService)
+        mAccountService = AccountAuthManager.getService(MainActivity.this, authParams);
+        // TODO 获取登录授权页面的Intent，并通过startActivityForResult拉起授权页面
+        startActivityForResult(mAccountService.getSignInIntent(), 8888);
+
+    }
+
+    /**
+     * 华为帐号的登出：需要考生填写
+     */
+    private void onAccountSignOut() {
+        AccountAuthParams authParam = new AccountAuthParamsHelper().createParams();
+        mAccountService = AccountAuthManager.getService(MainActivity.this, authParam);
+
+        // TODO 调用华为帐号登出接口
+        Task<Void> signOutTask = mAccountService.signOut();
+        // TODO 为华为帐号登出结果添加监听，并在登录成功的回调中调用updateSignOutResult()方法，更新登出的结果
+        signOutTask.addOnCompleteListener(new OnCompleteListener<Void>() {
+            @Override
+            public void onComplete(Task<Void> task) {
+                //完成退出后的处理
+                updateSignOutResult();
+            }
+        });
+    }
+
+    /**
+     * 需要考生填写
+     */
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+
+        if (requestCode == 8888) {
+            // TODO 从data中获取华为帐号的登录结果
+            Task<AuthAccount> authAccountTask = AccountAuthManager.parseAuthResultFromIntent(data);
+            // TODO 判断华为帐号是否登录成功，如果登录成功，调用getHwIdUser方法获得HwIdUser对象，然后调用updateUI更新登录的结果
+            if (authAccountTask.isSuccessful()) {
+                //登录成功，获取用户的帐号信息和Authorization Code
+                AuthAccount authAccount = authAccountTask.getResult();
+
+                HwIdUser user= getHwIdUser(authAccount);
+
+                updateUI(user);
+            } else {
+                //登录失败
+            }
+        }
+
+
+
+    }
+
+    /**
+     * 请勿修改，否则可能影响考试成绩
+     */
+
+    @Override
+    public void onClick(View v) {
+        if (v.getId() == R.id.hwid_signin) {
+            // 华为帐号登录
+            onAccountLogin();
+        } else if (v.getId() == R.id.hwid_signout) {
+            // 华为帐号登出
+            onAccountSignOut();
+        }
+    }
+
+    /**
+     * 请勿修改，否则可能影响考试成绩
+     * 将AuthAccount转换为HwIdUser对象
+     */
+    @NotNull
+    private HwIdUser getHwIdUser(AuthAccount authAccount) {
+        HwIdUser user = new HwIdUser();
+        user.setName(authAccount.getGivenName());
+        user.setNickName(authAccount.getDisplayName());
+        user.setEmail(authAccount.getEmail());
+        user.setUnionId(authAccount.getUnionId());
+        user.setOpenId(authAccount.getOpenId());
+        return user;
+    }
+
+    /**
+     * 请勿修改，否则可能影响考试成绩
+     * 华为帐号登录成功之后，更新界面
+     */
+    private void updateUI(HwIdUser user) {
+        if (null != user) {
+            mLoginStatus.setText(getString(R.string.login_success));
+            mName.setText(getString(R.string.hwid_name, user.getName()));
+            mEmail.setText(getString(R.string.hwid_email, user.getEmail()));
+            mNickName.setText(getString(R.string.tv_nickname, user.getNickName()));
+            mUnionId.setText(getString(R.string.hwid_unionId, user.getUnionId()));
+            mOpenId.setText(getString(R.string.hwid_openId, user.getOpenId()));
+        }
+    }
+
+    /**
+     * 请勿修改，否则可能影响考试成绩
+     * 华为帐号登出成功之后，更新界面
+     */
+    private void updateSignOutResult() {
+        mLoginStatus.setText(getString(R.string.signout_success));
+        mName.setText(getString(R.string.hwid_name));
+        mEmail.setText(getString(R.string.hwid_email));
+        mNickName.setText(getString(R.string.tv_nickname));
+        mUnionId.setText(getString(R.string.hwid_unionId));
+        mOpenId.setText(getString(R.string.hwid_openId));
+    }
+}

@@ -1,0 +1,212 @@
+package com.huawei.iapkit;
+
+import android.app.Activity;
+import android.content.Intent;
+import android.content.IntentSender;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.appcompat.widget.LinearLayoutCompat;
+
+import com.huawei.hmf.tasks.OnFailureListener;
+import com.huawei.hmf.tasks.OnSuccessListener;
+import com.huawei.hmf.tasks.Task;
+import com.huawei.hms.iap.Iap;
+import com.huawei.hms.iap.IapApiException;
+import com.huawei.hms.iap.IapClient;
+import com.huawei.hms.iap.entity.ConsumeOwnedPurchaseReq;
+import com.huawei.hms.iap.entity.ConsumeOwnedPurchaseResult;
+import com.huawei.hms.iap.entity.InAppPurchaseData;
+import com.huawei.hms.iap.entity.OrderStatusCode;
+import com.huawei.hms.iap.entity.ProductInfo;
+import com.huawei.hms.iap.entity.ProductInfoReq;
+import com.huawei.hms.iap.entity.ProductInfoResult;
+import com.huawei.hms.iap.entity.PurchaseIntentReq;
+import com.huawei.hms.iap.entity.PurchaseIntentResult;
+import com.huawei.hms.iap.entity.PurchaseResultInfo;
+import com.huawei.hms.support.api.client.Status;
+
+import org.json.JSONException;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+    // 展示购买商品的PurchaseToken - 请不要删除，否则影响考试成绩
+    private AppCompatTextView mTvPurchaseToken;
+    // 展示商品信息Content - 请不要删除，否则影响考试成绩
+    private LinearLayoutCompat mLlProductContent;
+    // 展示商品信息-商品名称 - 请不要删除，否则影响考试成绩
+    private AppCompatTextView mTvProductName;
+    // 展示商品信息-商品ID - 请不要删除，否则影响考试成绩
+    private AppCompatTextView mTvProductId;
+    // 展示商品信息-商品价格 - 请不要删除，否则影响考试成绩
+    private AppCompatTextView mTvProductPrice;
+    // 展示商品信息-商品类型 - 请不要删除，否则影响考试成绩
+    private AppCompatTextView mTvProductType;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        initView();
+    }
+
+    /**
+     * 初始化View - 请不要删除，否则影响考试成绩
+     */
+    private void initView() {
+        // 展示购买商品的PurchaseToken
+        mTvPurchaseToken = findViewById(R.id.text_purchaseToken);
+        // 展示商品信息Content - 请不要删除，否则影响考试成绩
+        mLlProductContent = findViewById(R.id.product_content);
+        // 展示商品信息-商品名称 - 请不要删除，否则影响考试成绩
+        mTvProductName = findViewById(R.id.product_name);
+        // 展示商品信息-商品ID - 请不要删除，否则影响考试成绩
+        mTvProductId = findViewById(R.id.product_id);
+        // 展示商品信息-商品价格 - 请不要删除，否则影响考试成绩
+        mTvProductPrice = findViewById(R.id.product_price);
+        // 展示商品信息-商品类型 - 请不要删除，否则影响考试成绩
+        mTvProductType = findViewById(R.id.product_type);
+
+        findViewById(R.id.btn_productList).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 实现获取商品列表功能  - 请不要删除，否则影响考试成绩
+                onGetProductList();
+            }
+        });
+
+        findViewById(R.id.btn_buyProduct).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 实现购买商品功能  - 请不要删除，否则影响考试成绩
+                onBuyProduct();
+            }
+        });
+    }
+
+    /**
+     * 更新商品信息 - 请不要删除，否则影响考试成绩
+     */
+    private void onUpdateProductInfo(List<ProductInfo> data) {
+        if (data == null || data.isEmpty()) {
+            mLlProductContent.setVisibility(View.GONE);
+            mTvProductName.setText("");
+            mTvProductId.setText("");
+            mTvProductPrice.setText("");
+            mTvProductType.setText("");
+            return;
+        }
+        mLlProductContent.setVisibility(View.VISIBLE);
+        // 只显示一个商品
+        ProductInfo productInfo = data.get(0);
+        mTvProductName.setText(productInfo.getProductName());
+        mTvProductId.setText(productInfo.getProductId());
+        mTvProductPrice.setText(productInfo.getPrice());
+        int type = productInfo.getPriceType();
+        //0：消耗型商品
+        //1：非消耗型商品
+        //2：订阅型商品
+        if (type == 0) {
+            mTvProductType.setText("消耗型商品");
+        } else if (type == 1) {
+            mTvProductType.setText("非消耗型商品");
+        } else if (type == 2) {
+            mTvProductType.setText("订阅型商品");
+        }
+    }
+
+    /**
+     * 实现获取商品列表功能  - 请不要删除，否则影响考试成绩
+     * 非消耗型商品ID ： Exams_NonConsumable_001
+     */
+    public void onGetProductList() {
+        // TODO 根据非消耗型商品类型为："1" 以及 商品ID固定为："Exams_NonConsumable_001"，设置请求商品列表参数 ProductInfoReq
+        List<String> list = new ArrayList<>();
+// 查询的商品必须是您在AppGallery Connect网站配置的商品
+        list.add("Exams_NonConsumable_001");
+        ProductInfoReq productInfoReq = new ProductInfoReq();
+// priceType: 0：消耗型商品; 1：非消耗型商品; 2：订阅型商品
+        productInfoReq.setPriceType(1);
+        productInfoReq.setProductIds(list);
+        // TODO 通过调用 obtainProductInfo 接口，获取商品列表数据
+        Task<ProductInfoResult> task = Iap.getIapClient(MainActivity.this).obtainProductInfo(productInfoReq);
+
+        // TODO 回调接口添加 addOnSuccessListener 监听，在 onSuccess(ProductInfoResult result) 回调成功方法中调用 onUpdateProductInfo 方法，展示商品信息
+        task.addOnSuccessListener(new OnSuccessListener<ProductInfoResult>() {
+            @Override
+            public void onSuccess(ProductInfoResult productInfoResult) {
+                // 获取接口请求成功时返回的商品详情信息
+                onUpdateProductInfo(productInfoResult.getProductInfoList());
+            }
+        });
+    }
+
+    /**
+     * 实现购买商品功能  - 请不要删除，否则影响考试成绩
+     */
+    private void onBuyProduct() {
+        // TODO 根据非消耗型商品类型 以及 商品ID，构建购买请求参数 PurchaseIntentReq
+        PurchaseIntentReq purchaseIntentReq=new PurchaseIntentReq();
+        purchaseIntentReq.setPriceType(1);
+        purchaseIntentReq.setProductId("Exams_NonConsumable_001");
+
+        // TODO 根据构建的 PurchaseIntentReq，调用createPurchaseIntent接口，创建托管商品订单
+        Task<PurchaseIntentResult> task = Iap.getIapClient(MainActivity.this).createPurchaseIntent(purchaseIntentReq);
+
+        // TODO 回调接口添加addOnSuccessListener监听，在 onSuccess() 回调成功方法中，启动IAP返回的收银台页面
+        task.addOnSuccessListener(new OnSuccessListener<PurchaseIntentResult>() {
+            @Override
+            public void onSuccess(PurchaseIntentResult result) {
+                Status status = result.getStatus();
+                if (status.hasResolution()) {
+                    try {
+                        // 6666是您自定义的常量
+                        // 启动IAP返回的收银台页面
+                        status.startResolutionForResult(MainActivity.this, 6666);
+                    } catch (IntentSender.SendIntentException exp) {
+                    }
+                }
+            }
+        });
+
+
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        try {
+            if (data == null) {
+                Log.e(TAG, "data is null");
+                return;
+            }
+
+            // TODO 支付成功后回调, 根据返回的 Intent data参数，调用 parsePurchaseResultInfoFromIntent 解析支付结果数据\
+            PurchaseResultInfo purchaseResultInfo = Iap.getIapClient(this).parsePurchaseResultInfoFromIntent(data);
+
+            // TODO 根据解析结果数据中 ReturnCode 判断支付是否成功
+            if (purchaseResultInfo.getReturnCode() == OrderStatusCode.ORDER_STATE_SUCCESS) {
+
+                //  TODO  根据解析结果数据获取的 getInAppPurchaseData()数据，构造 InAppPurchaseData 对象，
+                //   并使用 InAppPurchaseData getPurchaseToken 方法获取 PurchaseToken，
+                InAppPurchaseData inAppPurchaseData = new InAppPurchaseData(purchaseResultInfo.getInAppPurchaseData());
+                String token = inAppPurchaseData.getPurchaseToken();
+
+                //  TODO 将获取的 PurchaseToke 值设置到 mTvPurchaseToken 控件中
+                mTvPurchaseToken.setText(token);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
